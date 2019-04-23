@@ -41,12 +41,14 @@
 #include "stm32f3xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+CAN_HandleTypeDef hcan;
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-CAN_HandleTypeDef hcan;
-CAN_FilterTypeDef sFilterConfig;
+
+//CAN_HandleTypeDef hcan;
+
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
@@ -63,8 +65,6 @@ static void MX_CAN_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-uint8_t DataTX[8];
-uint8_t DataRX[8];
 
 /* USER CODE END 0 */
 
@@ -76,21 +76,39 @@ uint8_t DataRX[8];
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	CAN_TxHeaderTypeDef pTxmsg;
-	CAN_RxHeaderTypeDef pRxmsg;
+	CAN_FilterTypeDef MyFilterConfig;
+	CAN_TxHeaderTypeDef DataTX;
+	CAN_RxHeaderTypeDef DataRX;
 	
-	uint32_t pTxMailbox;
+	uint8_t DataTXmsg[4];
+	uint8_t DataRXmsg[4];
 	
+	uint32_t MypTxMailbox;
 	
   /* USER CODE END 1 */
-	
+
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  
+  HAL_Init();
+
   /* USER CODE BEGIN Init */
-	HAL_Init();
-  
+	DataTX.RTR = CAN_RTR_DATA;
+	DataTX.TransmitGlobalTime = DISABLE;
+	DataTX.IDE = CAN_ID_STD;
+	DataTX.StdId = 0x0000;
+	DataTX.DLC = 4;
+	
+	DataRX.IDE = CAN_ID_STD;
+	
+	MyFilterConfig.FilterIdLow = 0x0000;
+	MyFilterConfig.FilterIdHigh = 0x0000;
+	MyFilterConfig.FilterBank = 0;
+	MyFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	MyFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	MyFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+	MyFilterConfig.FilterActivation = CAN_FILTER_ENABLE;
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -105,26 +123,13 @@ int main(void)
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 	HAL_CAN_Init(&hcan);
+	HAL_CAN_ConfigFilter(&hcan, &MyFilterConfig);
 	HAL_CAN_Start(&hcan);
 	
-	pTxmsg.StdId = 0x005;  // SEt ID
-	pTxmsg.DLC = 8;  // Amount of transfering nots
-	pTxmsg.IDE = CAN_ID_STD;  // We use 11 bit format
-	pTxmsg.RTR = 0;
-	pTxmsg.TransmitGlobalTime = DISABLE;
-
-	pRxmsg.IDE = CAN_ID_STD;
-	
-	sFilterConfig.FilterBank = 1;
-	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	sFilterConfig.FilterIdLow = 0x0000;
-	sFilterConfig.FilterIdHigh = 0x00B0;
-	sFilterConfig.FilterMaskIdLow = 0x0000;
-	sFilterConfig.FilterMaskIdHigh = 0x00B0;
-	sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
-	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-	sFilterConfig.FilterActivation = ENABLE;
-	HAL_CAN_ConfigFilter(&hcan, &sFilterConfig);
+	DataTXmsg[0] = 0xF;
+	DataTXmsg[1] = 0xF;
+	DataTXmsg[2] = 0xF;
+	DataTXmsg[3] = 0xF;
 	
   /* USER CODE END 2 */
 
@@ -132,18 +137,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	HAL_CAN_AddTxMessage(&hcan, &DataTX, DataTXmsg, &MypTxMailbox);
+	HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
   /* USER CODE END WHILE */
-		DataTX[0] = 0xFF;
-		DataTX[1] = 0xFF;
-		DataTX[2] = 0xFF;
-		DataTX[3] = 0xFF;
-		DataTX[4] = 0xFF;
-		DataTX[5] = 0xFF;
-		DataTX[6] = 0xFF;
-		DataTX[7] = 0xFF;
-		HAL_CAN_AddTxMessage(&hcan, &pTxmsg, DataTX, &pTxMailbox);
-		HAL_CAN_GetRxMessage(&hcan, 0, &pRxmsg, DataRX);
+
   /* USER CODE BEGIN 3 */
 
   }
@@ -205,7 +202,7 @@ static void MX_CAN_Init(void)
 {
 
   hcan.Instance = CAN;
-  hcan.Init.Prescaler = 2;
+  hcan.Init.Prescaler = 16;
   hcan.Init.Mode = CAN_MODE_LOOPBACK;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_5TQ;
@@ -237,7 +234,6 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
