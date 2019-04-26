@@ -144,6 +144,8 @@ int main(void)
 	DataTXmsg[2] = 0x3F;
 	DataTXmsg[3] = 0x4F;
 	
+	// We need to send 1 message to empty TxMailbox for interrupt
+	HAL_CAN_AddTxMessage(&hcan, &DataTX, DataTXmsg, &MypTxMailbox);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -151,7 +153,7 @@ int main(void)
   while (1)
   {
 		
-	HAL_CAN_AddTxMessage(&hcan, &DataTX, DataTXmsg, &MypTxMailbox);
+	//HAL_CAN_AddTxMessage(&hcan, &DataTX, DataTXmsg, &MypTxMailbox);
 	//HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
 		
 		

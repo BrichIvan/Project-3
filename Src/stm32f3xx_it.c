@@ -226,13 +226,14 @@ void CAN_RX0_IRQHandler(void)
   /* USER CODE END CAN_RX0_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan);
   /* USER CODE BEGIN CAN_RX0_IRQn 1 */
+	
+	///////////////////////////////////If we don't need to read all bytes, we can comment 2-nd and 3-d strings////////////////
+	HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
+	HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
 	HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
 	
-	//DataRXmsg[0] = 0;
-	//DataRXmsg[1] = 0;
-	//DataRXmsg[2] = 0;
-	//DataRXmsg[3] = 0;
-  /* USER CODE END CAN_RX0_IRQn 1 */
+	
+	  /* USER CODE END CAN_RX0_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
