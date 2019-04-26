@@ -39,6 +39,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f3xx_hal.h"
+#include "stm32f3xx_it.h"
 
 /* USER CODE BEGIN Includes */
 CAN_HandleTypeDef hcan;
@@ -46,18 +47,28 @@ CAN_HandleTypeDef hcan;
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-
-//CAN_HandleTypeDef hcan;
+CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+	CAN_HandleTypeDef hcan;
+	CAN_FilterTypeDef MyFilterConfig;
+	CAN_TxHeaderTypeDef DataTX;
+	CAN_RxHeaderTypeDef DataRX;
 
+	
+	
+	uint8_t DataTXmsg[4];
+	uint8_t DataRXmsg[4];
+	
+	uint32_t MypTxMailbox;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
+static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -76,14 +87,7 @@ static void MX_CAN_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	CAN_FilterTypeDef MyFilterConfig;
-	CAN_TxHeaderTypeDef DataTX;
-	CAN_RxHeaderTypeDef DataRX;
 	
-	uint8_t DataTXmsg[4];
-	uint8_t DataRXmsg[4];
-	
-	uint32_t MypTxMailbox;
 	
   /* USER CODE END 1 */
 
@@ -100,6 +104,7 @@ int main(void)
 	DataTX.DLC = 4;
 	
 	DataRX.IDE = CAN_ID_STD;
+	DataRX.DLC = 4;
 	
 	MyFilterConfig.FilterIdLow = 0x0000;
 	MyFilterConfig.FilterIdHigh = 0x0000;
@@ -108,6 +113,8 @@ int main(void)
 	MyFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
 	MyFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
 	MyFilterConfig.FilterActivation = CAN_FILTER_ENABLE;
+	
+
 	
   /* USER CODE END Init */
 
@@ -121,15 +128,21 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+
+  /* Initialize interrupts */
+  MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 	HAL_CAN_Init(&hcan);
-	HAL_CAN_ConfigFilter(&hcan, &MyFilterConfig);
-	HAL_CAN_Start(&hcan);
+	HAL_CAN_ConfigFilter(&hcan, &MyFilterConfig); 
 	
-	DataTXmsg[0] = 0xF;
-	DataTXmsg[1] = 0xF;
-	DataTXmsg[2] = 0xF;
-	DataTXmsg[3] = 0xF;
+	HAL_CAN_Start(&hcan);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_TX_MAILBOX_EMPTY);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_FULL);
+	
+	DataTXmsg[0] = 0x1F;
+	DataTXmsg[1] = 0x2F;
+	DataTXmsg[2] = 0x3F;
+	DataTXmsg[3] = 0x4F;
 	
   /* USER CODE END 2 */
 
@@ -137,8 +150,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		
 	HAL_CAN_AddTxMessage(&hcan, &DataTX, DataTXmsg, &MypTxMailbox);
-	HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
+	//HAL_CAN_GetRxMessage(&hcan, 0, &DataRX, DataRXmsg);
+		
+		
+	DataTXmsg[0] = 0x1F;
+	DataTXmsg[1] = 0x2F;
+	DataTXmsg[2] = 0x3F;
+	DataTXmsg[3] = 0x4F;
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -195,6 +215,20 @@ void SystemClock_Config(void)
 
   /* SysTick_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+}
+
+/**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* CAN_TX_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(CAN_TX_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(CAN_TX_IRQn);
+  /* CAN_RX0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(CAN_RX0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(CAN_RX0_IRQn);
 }
 
 /* CAN init function */
